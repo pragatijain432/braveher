@@ -7,20 +7,63 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Report = () => {
+  const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [incidentType, setIncidentType] = useState("");
+  const [incidentAt, setIncidentAt] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [anonymous, setAnonymous] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const reset = () => {
+    setIncidentType("");
+    setIncidentAt("");
+    setLocation("");
+    setDescription("");
+    setAnonymous(false);
+  };
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+
+    if (!incidentType) {
+      toast({ title: "Please select an incident type", variant: "destructive" });
+      return;
+    }
+    if (!user && !anonymous) {
       toast({
-        title: "Report submitted",
-        description: "Thank you for helping keep our community safer.",
+        title: "Sign in to submit",
+        description: "Or check 'Submit anonymously' to continue.",
+        variant: "destructive",
       });
-    }, 1200);
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from("incident_reports").insert({
+      user_id: anonymous ? null : user?.id ?? null,
+      incident_type: incidentType,
+      incident_at: incidentAt ? new Date(incidentAt).toISOString() : null,
+      location: location || null,
+      description: description || null,
+      is_anonymous: anonymous,
+    });
+    setSubmitting(false);
+
+    if (error) {
+      toast({ title: "Could not submit", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    reset();
+    toast({
+      title: "Report submitted",
+      description: "Thank you for helping keep our community safer.",
+    });
   };
 
   return (
@@ -40,7 +83,7 @@ const Report = () => {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>Incident type</Label>
-              <Select>
+              <Select value={incidentType} onValueChange={setIncidentType}>
                 <SelectTrigger className="rounded-xl mt-1.5 h-11"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="harassment">Harassment</SelectItem>
@@ -53,7 +96,12 @@ const Report = () => {
             </div>
             <div>
               <Label>Date & time</Label>
-              <Input type="datetime-local" className="rounded-xl mt-1.5 h-11" />
+              <Input
+                type="datetime-local"
+                className="rounded-xl mt-1.5 h-11"
+                value={incidentAt}
+                onChange={(e) => setIncidentAt(e.target.value)}
+              />
             </div>
           </div>
 
@@ -61,13 +109,23 @@ const Report = () => {
             <Label>Location</Label>
             <div className="relative mt-1.5">
               <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9 rounded-xl h-11" placeholder="Street, neighborhood, city" />
+              <Input
+                className="pl-9 rounded-xl h-11"
+                placeholder="Street, neighborhood, city"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
             </div>
           </div>
 
           <div>
             <Label>Describe what happened</Label>
-            <Textarea className="rounded-xl mt-1.5 min-h-32" placeholder="Share as much detail as you're comfortable with..." />
+            <Textarea
+              className="rounded-xl mt-1.5 min-h-32"
+              placeholder="Share as much detail as you're comfortable with..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
 
           <div>
@@ -91,7 +149,13 @@ const Report = () => {
           </div>
 
           <div className="flex items-center gap-2 p-4 rounded-xl bg-accent/40 text-sm">
-            <input type="checkbox" id="anon" className="accent-primary w-4 h-4" />
+            <input
+              type="checkbox"
+              id="anon"
+              className="accent-primary w-4 h-4"
+              checked={anonymous}
+              onChange={(e) => setAnonymous(e.target.checked)}
+            />
             <label htmlFor="anon">Submit anonymously</label>
           </div>
 
