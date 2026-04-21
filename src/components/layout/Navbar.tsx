@@ -1,8 +1,10 @@
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Menu, X, Moon, Sun } from "lucide-react";
+import { Shield, Menu, X, Moon, Sun, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 
 const links = [
   { to: "/", label: "Home" },
@@ -19,6 +21,14 @@ export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [dark, setDark] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({ title: "Signed out", description: "Stay safe out there." });
+    navigate("/");
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -76,12 +86,20 @@ export const Navbar = () => {
           >
             {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex rounded-full">
-            <Link to="/login">Login</Link>
-          </Button>
-          <Button asChild variant="hero" size="sm" className="hidden sm:inline-flex rounded-full">
-            <Link to="/signup">Sign up</Link>
-          </Button>
+          {user ? (
+            <Button onClick={handleSignOut} variant="ghost" size="sm" className="hidden sm:inline-flex rounded-full">
+              <LogOut className="w-4 h-4" /> Sign out
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex rounded-full">
+                <Link to="/login">Login</Link>
+              </Button>
+              <Button asChild variant="hero" size="sm" className="hidden sm:inline-flex rounded-full">
+                <Link to="/signup">Sign up</Link>
+              </Button>
+            </>
+          )}
           <button
             className="lg:hidden p-2 rounded-full hover:bg-accent/50"
             onClick={() => setOpen((o) => !o)}
@@ -116,12 +134,20 @@ export const Navbar = () => {
                 </NavLink>
               ))}
               <div className="flex gap-2 pt-2">
-                <Button asChild variant="outline" className="flex-1 rounded-full">
-                  <Link to="/login">Login</Link>
-                </Button>
-                <Button asChild variant="hero" className="flex-1 rounded-full">
-                  <Link to="/signup">Sign up</Link>
-                </Button>
+                {user ? (
+                  <Button onClick={handleSignOut} variant="outline" className="flex-1 rounded-full">
+                    <LogOut className="w-4 h-4" /> Sign out
+                  </Button>
+                ) : (
+                  <>
+                    <Button asChild variant="outline" className="flex-1 rounded-full">
+                      <Link to="/login">Login</Link>
+                    </Button>
+                    <Button asChild variant="hero" className="flex-1 rounded-full">
+                      <Link to="/signup">Sign up</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
